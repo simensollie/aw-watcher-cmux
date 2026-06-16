@@ -12,7 +12,8 @@ from dataclasses import dataclass, field
 import pytest
 
 from aw_watcher_cmux import cmux
-from aw_watcher_cmux.main import build_event, poll_once
+from aw_watcher_cmux import main as loop
+from aw_watcher_cmux.main import CMUX_ERROR, NO_SOCKET, OK, build_event, poll_once
 from aw_watcher_cmux.normalize import DEFAULT_AGENT_PATTERNS, Normalizer
 
 
@@ -89,25 +90,101 @@ def test_get_focused_no_selected_surface_raises(monkeypatch):
 
 def test_poll_once_skips_when_socket_missing(monkeypatch):
     monkeypatch.setattr(cmux, "socket_available", lambda _p: False)
-    assert poll_once(FakeConfig(), Normalizer()) is None
+    result, status = poll_once(FakeConfig(), Normalizer())
+    assert result is None
+    assert status == NO_SOCKET
 
 
-def test_poll_once_skips_on_cmuxerror(monkeypatch):
+def test_poll_once_reports_cmux_error(monkeypatch):
     monkeypatch.setattr(cmux, "socket_available", lambda _p: True)
     def boom(_bin):
-        raise cmux.CmuxError("transient")
+        raise cmux.CmuxError("cmux list-workspaces exited -13: ")
     monkeypatch.setattr(cmux, "get_focused", boom)
-    assert poll_once(FakeConfig(), Normalizer()) is None
+    result, status = poll_once(FakeConfig(), Normalizer())
+    assert status == CMUX_ERROR
+    assert "exited -13" in result  # message carried for the warning
 
 
 def test_poll_once_returns_event_on_success(monkeypatch):
     monkeypatch.setattr(cmux, "socket_available", lambda _p: True)
     monkeypatch.setattr(cmux, "get_focused", lambda _bin: cmux.Focused(
         "workspace:1", "Certain QMS", "surface:32", "✳ refine reports"))
-    ev = poll_once(FakeConfig(), Normalizer())
-    assert ev is not None
+    ev, status = poll_once(FakeConfig(), Normalizer())
+    assert status == OK
     assert ev.data["app"] == "Certain QMS"
     assert ev.data["is_agent"] is True
+
+
+# --- run() warn-once diagnostic --------------------------------------------
+
+class _FakeClient:
+    def __init__(self):
+        self.heartbeats = 0
+
+    def heartbeat(self, *a, **k):
+        self.heartbeats += 1
+
+
+def _run_n_ticks(monkeypatch, statuses, runconfig):
+    """Drive run() through a fixed sequence of poll_once outcomes, then stop.
+
+    statuses: list of (result, status) tuples poll_once should yield in order.
+    Returns (fake_client, list_of_warning_messages).
+    """
+    seq = iter(statuses)
+    warnings = []
+
+    def fake_poll(_cfg, _norm):
+        try:
+            return next(seq)
+        except StopIteration:
+            raise KeyboardInterrupt  # ends run() cleanly
+
+    monkeypatch.setattr(loop, "poll_once", fake_poll)
+    monkeypatch.setattr(loop.time, "sleep", lambda _s: None)  # no real waiting
+    monkeypatch.setattr(loop.logger, "warning", lambda msg, *a: warnings.append(msg % a if a else msg))
+
+    client = _FakeClient()
+    try:
+        loop.run(client, "bucket", runconfig)
+    except KeyboardInterrupt:
+        pass
+    return client, warnings
+
+
+@dataclass
+class FakeRunConfig(FakeConfig):
+    poll_interval: float = 0.0
+    pulsetime: float = 5.0
+
+
+def test_run_warns_once_after_persistent_cmux_errors(monkeypatch):
+    errors = [("cmux list-workspaces exited -13: ", CMUX_ERROR)] * (
+        loop.WARN_AFTER_CONSECUTIVE_ERRORS + 5)
+    client, warnings = _run_n_ticks(monkeypatch, errors, FakeRunConfig())
+    assert client.heartbeats == 0
+    assert len(warnings) == 1  # warn-once, not every tick
+    assert "cmuxOnly" in warnings[0]
+
+
+def test_run_does_not_warn_on_transient_errors(monkeypatch):
+    # A few errors, then success → below threshold, no warning, heartbeat sent.
+    seq = [("e", CMUX_ERROR)] * 3 + [(_ok_event(), OK)]
+    client, warnings = _run_n_ticks(monkeypatch, seq, FakeRunConfig())
+    assert warnings == []
+    assert client.heartbeats == 1
+
+
+def test_run_no_socket_is_not_an_error(monkeypatch):
+    seq = [(None, NO_SOCKET)] * (loop.WARN_AFTER_CONSECUTIVE_ERRORS + 5)
+    client, warnings = _run_n_ticks(monkeypatch, seq, FakeRunConfig())
+    assert warnings == []
+    assert client.heartbeats == 0
+
+
+def _ok_event():
+    return build_event(
+        cmux.Focused("workspace:1", "Certain QMS", "surface:1", "✳ work"), Normalizer())
 
 
 # --- build_event ------------------------------------------------------------
