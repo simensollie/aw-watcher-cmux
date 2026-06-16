@@ -98,8 +98,11 @@ override the file.
 | `cmux_bin` | `cmux` | Path to the cmux CLI |
 | `socket_path` | `$CMUX_SOCKET_PATH` or `/tmp/cmux.sock` | Override socket |
 
-CLI flags: `--testing` (aw test server on port 5666 + `-testing` bucket suffix),
-`--verbose`, `--cmux-bin`, `--socket-path`, `--poll-interval`.
+CLI flags override the file: `--testing` (aw test server on port 5666 +
+`-testing` bucket suffix), `--verbose`, `--cmux-bin`, `--socket-path`,
+`--poll-interval`, `--pulsetime`, `--generic-terminal-label`,
+`--keep-command-name`. `agent_patterns` is a list of regexes and is configured
+in the file only.
 
 ## Active cmux time (aw query)
 

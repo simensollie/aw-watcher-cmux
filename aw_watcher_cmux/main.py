@@ -9,6 +9,7 @@ over-emit and let an aw query intersect with the window + AFK watchers (§8).
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timezone
 
 from aw_core.models import Event
@@ -52,8 +53,6 @@ def poll_once(config, normalizer: Normalizer) -> Event | None:
 
 def run(client, bucket_id: str, config) -> None:
     """Run the poll loop until interrupted. `client` is a connected ActivityWatchClient."""
-    import time
-
     normalizer = Normalizer(
         agent_patterns=config.agent_patterns,
         generic_terminal_label=config.generic_terminal_label,

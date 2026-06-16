@@ -18,7 +18,8 @@ classifiers = [
     "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
 ]
 dependencies = [
-    "aw-client",
+    # >=0.5 for client_hostname and queued heartbeat/create_bucket support.
+    "aw-client>=0.5.13",
 ]
 
 [project.optional-dependencies]

@@ -58,12 +58,20 @@ def load_config(args: argparse.Namespace) -> Config:
     except Exception as exc:  # noqa: BLE001 - config is best-effort, defaults are fine
         logger.warning("could not load config file, using defaults: %s", exc)
 
-    if args.cmux_bin:
+    # Flags override the file. Use `is not None` so an explicit 0 is honored and
+    # not silently dropped by a truthiness check.
+    if args.cmux_bin is not None:
         cfg.cmux_bin = args.cmux_bin
-    if args.socket_path:
+    if args.socket_path is not None:
         cfg.socket_path = args.socket_path
-    if args.poll_interval:
+    if args.poll_interval is not None:
         cfg.poll_interval = args.poll_interval
+    if args.pulsetime is not None:
+        cfg.pulsetime = args.pulsetime
+    if args.generic_terminal_label is not None:
+        cfg.generic_terminal_label = args.generic_terminal_label
+    if args.keep_command_name is not None:
+        cfg.keep_command_name = args.keep_command_name
     return cfg
 
 
@@ -77,6 +85,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--socket-path", dest="socket_path", help="override cmux socket path")
     p.add_argument("--poll-interval", dest="poll_interval", type=float,
                    help="seconds between polls")
+    p.add_argument("--pulsetime", dest="pulsetime", type=float,
+                   help="heartbeat merge window in seconds")
+    p.add_argument("--generic-terminal-label", dest="generic_terminal_label",
+                   help="label stored for non-agent surfaces")
+    # store_const keeps the unset default at None so it doesn't override the file.
+    p.add_argument("--keep-command-name", dest="keep_command_name",
+                   action="store_const", const=True, default=None,
+                   help="store the first command token instead of the generic label")
+    # agent_patterns is a list of regexes; it stays file-only (impractical on the CLI).
     return p.parse_args(argv)
 
 

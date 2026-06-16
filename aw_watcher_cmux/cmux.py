@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import os
+import stat
 import subprocess
 from dataclasses import dataclass
 
@@ -50,8 +51,6 @@ def socket_path(override: str | None = None) -> str:
 def socket_available(path: str) -> bool:
     """True if the cmux socket exists (cmux is running)."""
     try:
-        import stat
-
         return stat.S_ISSOCK(os.stat(path).st_mode)
     except OSError:
         return False

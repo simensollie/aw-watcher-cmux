@@ -24,8 +24,20 @@
     <key>RunAtLoad</key>
     <true/>
 
+    <!--
+      Restart only on a crash (non-zero exit), not on a clean exit. With a bare
+      <true/> a misconfigured path or startup crash would respawn in a tight
+      loop; SuccessfulExit=false lets a clean shutdown stay down. ThrottleInterval
+      caps the respawn rate as a backstop.
+    -->
     <key>KeepAlive</key>
-    <true/>
+    <dict>
+      <key>SuccessfulExit</key>
+      <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
 
     <key>StandardOutPath</key>
     <string>/Users/CHANGE_ME/Library/Logs/activitywatch/aw-watcher-cmux.log</string>
