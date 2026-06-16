@@ -37,3 +37,18 @@ def test_returns_none_when_workspace_missing():
 
 def test_returns_none_when_window_missing():
     assert extract_focused({"workspace": "Personal", "window": None}) is None
+
+
+def test_workspace_index_none_when_row_absent():
+    # A valid main-content selection with no matching sidebar row → index None
+    # (a valid non-error result, not None for the whole Focused).
+    snap = {
+        "workspace": "Work",
+        "window": {
+            "desc": None, "selected": None, "children": [
+                {"desc": "⠐ some task", "selected": True, "children": []},
+            ],
+        },
+    }
+    assert extract_focused(snap) == Focused(
+        workspace_name="Work", workspace_index=None, surface_title="⠐ some task")

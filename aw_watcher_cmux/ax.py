@@ -10,6 +10,8 @@ from dataclasses import dataclass
 # Sidebar workspace rows describe themselves as "<name>, workspace N of M".
 # We use this both to read the focused workspace's index and to exclude the
 # sidebar's per-workspace selected tab from the main-content selection.
+# Assumes main-content tab titles never end in this exact "…, workspace N of M"
+# form (cmux tab titles don't); such a title would be misread as a sidebar row.
 _SIDEBAR_RE = re.compile(r",\s*workspace\s+(\d+)\s+of\s+(\d+)\s*$")
 
 
@@ -40,7 +42,9 @@ def extract_focused(snapshot: dict) -> Focused | None:
             if desc[: m.start()] == workspace and state["index"] is None:
                 state["index"] = int(m.group(1))
         # A genuine selection: selected, has a title, in main content (not the
-        # sidebar workspace list, and not itself a workspace row).
+        # sidebar workspace list, and not itself a workspace row). `not now_sidebar`
+        # already excludes a matched row (matching sets now_sidebar=True); the
+        # explicit `m is None` documents "not the workspace row itself".
         if (
             node.get("selected") is True
             and desc
