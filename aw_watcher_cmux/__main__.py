@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import socket as socketlib
 from dataclasses import dataclass, field
@@ -12,6 +13,8 @@ from aw_core.config import load_config_toml
 from aw_core.log import setup_logging
 
 from . import __version__
+from . import ax
+from . import cmux
 from . import main as loop
 from .normalize import DEFAULT_AGENT_PATTERNS, DEFAULT_GENERIC_LABEL
 
@@ -94,11 +97,55 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    action="store_const", const=True, default=None,
                    help="store the first command token instead of the generic label")
     # agent_patterns is a list of regexes; it stays file-only (impractical on the CLI).
+    p.add_argument("--selfcheck", action="store_true",
+                   help="compare AX reading against the cmux socket oracle and exit "
+                        "(run inside a cmux surface)")
+    p.add_argument("--snapshot", action="store_true",
+                   help="print cmux's serialized AX tree as JSON and exit "
+                        "(for capturing test fixtures)")
     return p.parse_args(argv)
+
+
+def run_snapshot() -> int:
+    pid = ax.cmux_pid()
+    if pid is None:
+        print("cmux is not running")
+        return 1
+    print(json.dumps(ax.snapshot_app(pid), ensure_ascii=False, indent=2))
+    return 0
+
+
+def run_selfcheck(config: Config) -> int:
+    """Compare the AX reading against the cmux socket oracle and report
+    MATCH/MISMATCH on workspace + surface (exit 0 match, 2 mismatch)."""
+    ax_f = ax.get_focused()
+    try:
+        # TODO: pass config.socket_path once cmux.get_focused accepts it; today
+        # the oracle uses $CMUX_SOCKET_PATH / the default socket.
+        sock = cmux.get_focused(config.cmux_bin)
+    except cmux.CmuxError as exc:
+        print(f"socket oracle unavailable (run inside a cmux surface): {exc}")
+        return 1
+    print(f"AX     : {ax_f}")
+    print(f"SOCKET : workspace={sock.workspace_name!r} surface={sock.surface_title!r}")
+    ok = (ax_f is not None
+          and ax_f.workspace_name == sock.workspace_name
+          and ax_f.surface_title == sock.surface_title)
+    print("MATCH" if ok else "MISMATCH")
+    return 0 if ok else 2
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    config = load_config(args)
+
+    # One-shot diagnostic modes print to stdout and exit; handle them before
+    # setup_logging so they don't spin up a rotating log file.
+    if args.snapshot:
+        return run_snapshot()
+    if args.selfcheck:
+        return run_selfcheck(config)
+
     setup_logging(
         CLIENT_NAME,
         testing=args.testing,
@@ -106,7 +153,8 @@ def main(argv: list[str] | None = None) -> int:
         log_stderr=True,
         log_file=True,
     )
-    config = load_config(args)
+    if not ax.is_trusted():
+        logger.error(loop._HINTS[loop.NOT_TRUSTED])
 
     client = ActivityWatchClient(CLIENT_NAME, testing=args.testing)
     hostname = client.client_hostname or socketlib.gethostname()
