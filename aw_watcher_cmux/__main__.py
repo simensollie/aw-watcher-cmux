@@ -103,6 +103,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--snapshot", action="store_true",
                    help="print cmux's serialized AX tree as JSON and exit "
                         "(for capturing test fixtures)")
+    p.add_argument("--request-permission", action="store_true",
+                   help="trigger the macOS Accessibility prompt for this binary "
+                        "and exit (used by the installer)")
     return p.parse_args(argv)
 
 
@@ -155,6 +158,12 @@ def main(argv: list[str] | None = None) -> int:
         return run_snapshot()
     if args.selfcheck:
         return run_selfcheck(config)
+    if args.request_permission:
+        ok = ax.request_trust()
+        print("Accessibility already granted." if ok else
+              "Accessibility prompt shown. Enable aw-watcher-cmux's interpreter in "
+              "System Settings > Privacy & Security > Accessibility, then restart it.")
+        return 0 if ok else 1
 
     setup_logging(
         CLIENT_NAME,
@@ -164,6 +173,11 @@ def main(argv: list[str] | None = None) -> int:
         log_file=True,
     )
     if not ax.is_trusted():
+        # Pop the native Accessibility prompt from THIS process's context. Under
+        # launchd (no responsible app) this registers the watcher's own binary —
+        # the identity that must be trusted — which a prompt triggered from a
+        # terminal would not. Harmless if already listed (no repeat dialog).
+        ax.request_trust()
         logger.error(loop._HINTS[loop.NOT_TRUSTED])
 
     client = ActivityWatchClient(CLIENT_NAME, testing=args.testing)
