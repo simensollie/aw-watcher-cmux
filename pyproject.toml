@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aw-watcher-cmux"
+version = "0.1.0"
+description = "ActivityWatch watcher recording the focused cmux workspace and tab"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MPL-2.0" }
+authors = [{ name = "Simen Sollie", email = "simen@sollie.io" }]
+keywords = ["activitywatch", "cmux", "time-tracking", "watcher"]
+classifiers = [
+    "Environment :: MacOS X",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+]
+dependencies = [
+    "aw-client",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[project.urls]
+Homepage = "https://github.com/simensollie/aw-watcher-cmux"
+Issues = "https://github.com/simensollie/aw-watcher-cmux/issues"
+
+[project.scripts]
+aw-watcher-cmux = "aw_watcher_cmux.__main__:main"
+
+[tool.setuptools]
+packages = ["aw_watcher_cmux"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

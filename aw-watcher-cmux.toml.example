@@ -1,0 +1,35 @@
+# aw-watcher-cmux configuration (spec §9).
+# Copy to:
+#   ~/Library/Application Support/activitywatch/aw-watcher-cmux/aw-watcher-cmux.toml
+# CLI flags override these values.
+
+[aw-watcher-cmux]
+# Seconds between polls.
+poll_interval = 2.0
+
+# Heartbeat merge window. Keep this >= poll_interval + a few seconds so
+# consecutive identical events merge across a missed tick.
+pulsetime = 5.0
+
+# Label stored for non-agent (plain shell) surfaces. Collapsing the churny
+# live command line to one label keeps dwell time accurate.
+generic_terminal_label = "terminal"
+
+# Store the first command token (e.g. "git") instead of the generic label
+# for non-agent surfaces.
+keep_command_name = false
+
+# Path to the cmux CLI.
+cmux_bin = "cmux"
+
+# Override the cmux socket. Defaults to $CMUX_SOCKET_PATH or /tmp/cmux.sock.
+# socket_path = "/tmp/cmux.sock"
+
+# Regexes (case-insensitive) marking a surface as an agent session. A leading
+# agent glyph is stripped from the stored title. The first pattern covers the
+# ✳-family stars plus the braille range U+2800-U+28FF that Claude Code and
+# other CLIs animate as a spinner.
+agent_patterns = [
+    '^\s*[✳✶✻✽*⠀-⣿]',
+    '^\s*(claude|codex|aider|gemini)\b',
+]

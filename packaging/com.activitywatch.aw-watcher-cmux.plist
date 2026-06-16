@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd service for aw-watcher-cmux (spec §12).
+
+  Install:
+    1. Edit the path in <string> below to point at your installed entry point
+       (e.g. ~/.local/bin/aw-watcher-cmux from `pipx install .`).
+    2. cp this file to ~/Library/LaunchAgents/
+    3. launchctl load ~/Library/LaunchAgents/com.activitywatch.aw-watcher-cmux.plist
+
+  Prefer aw-qt management if you run it: aw-qt auto-discovers executables named
+  aw-watcher-* and can start/stop this watcher alongside the others.
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.activitywatch.aw-watcher-cmux</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/Users/CHANGE_ME/.local/bin/aw-watcher-cmux</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/CHANGE_ME/Library/Logs/activitywatch/aw-watcher-cmux.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/CHANGE_ME/Library/Logs/activitywatch/aw-watcher-cmux.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+  </dict>
+</plist>
