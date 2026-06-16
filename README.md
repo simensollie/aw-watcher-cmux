@@ -4,10 +4,11 @@ An [ActivityWatch](https://activitywatch.net/) watcher that records which
 [cmux](https://cmux.app/) **workspace** (project) and **tab/surface** (terminal
 or agent session) is focused over time.
 
-It polls the cmux Unix-socket CLI, normalizes noisy terminal titles into
-agent-aware labels, and pushes heartbeats to the local `aw-server`. Actual
-"active time" is derived at query time by intersecting with the window watcher
-(cmux frontmost) and the AFK watcher (user present).
+It reads the focused cmux workspace and tab from the macOS Accessibility API,
+normalizes noisy terminal titles into agent-aware labels, and pushes heartbeats
+to the local `aw-server`. Actual "active time" is derived at query time by
+intersecting with the window watcher (cmux frontmost) and the AFK watcher (user
+present).
 
 macOS only (cmux is macOS only).
 
@@ -24,9 +25,9 @@ macOS only (cmux is macOS only).
 ```
    poll (2s)     ┌─────────────────────────────┐
    ┌──────────►  │   aw-watcher-cmux (python)   │
-   │             │  cmux.py: run + parse CLI    │
-cmux Unix socket │  normalize.py: title rules   │ heartbeat
- (/tmp/cmux.sock)│  main.py: poll loop          │──────────►  aw-server
+   │             │  ax.py: read cmux UI via AX  │
+ macOS Accessibility  normalize.py: title rules │ heartbeat
+   │  (pyobjc)   │  main.py: poll loop          │──────────►  aw-server
    ◄─────────────┘                              │             :5600
                  └─────────────────────────────┘   bucket: aw-watcher-cmux_<host>
 ```
@@ -44,27 +45,26 @@ for AFK.
 | `app` | string | `Certain QMS` | Focused workspace name (the project dimension) |
 | `title` | string | `✳ refine reports` / `terminal` | Normalized tab label |
 | `is_agent` | bool | `true` | Whether the surface is an agent session |
-| `workspace_ref` | string | `workspace:1` | cmux ref (diagnostic) |
-| `surface_ref` | string | `surface:32` | cmux ref (diagnostic) |
+| `workspace_index` | int | `1` | 1-based position of the workspace (diagnostic) |
 
 Using `app`/`title` (not custom keys) is deliberate: aw heartbeat-merges
 consecutive identical events and its categorization rules match these keys.
 Plain-shell live command lines are collapsed to a single `terminal` label so
 they merge into long blocks instead of fragmenting the timeline.
 
-## ⚠️ Must run inside a cmux surface
+## Requires Accessibility permission
 
-cmux's control socket authorizes callers by their **cmux-surface context**
-(`cmux identify` reports a `caller` surface). Its default access mode is
-`cmuxOnly`: only processes running **inside a cmux terminal surface** are
-allowed. A detached process — a launchd `LaunchAgent`, an aw-qt-spawned
-watcher, anything `nohup`/`&`-orphaned — has no caller surface and every query
-is **rejected and killed with SIGPIPE**, so the watcher records nothing.
+aw-watcher-cmux reads cmux's focused workspace and selected tab via the macOS
+**Accessibility API** (it does not use cmux's access-gated control socket). Grant
+the permission once:
 
-This was verified empirically (including under a real `LaunchAgent` in the GUI
-session). Consequence: **run `aw-watcher-cmux` from inside a cmux tab.** The
-classic ActivityWatch deployment paths (standalone launchd, aw-qt management)
-do not work unless cmux exposes external socket auth (see below).
+- **System Settings → Privacy & Security → Accessibility** → add the
+  `aw-watcher-cmux` executable, or **aw-qt** if it manages the watcher (aw-qt
+  usually already has it for the window watcher).
+
+The watcher must run in your GUI login session (launchd LaunchAgent or aw-qt —
+both do). Without the permission it records nothing and logs a one-time warning
+telling you to grant it.
 
 ## Install
 
@@ -72,31 +72,22 @@ do not work unless cmux exposes external socket auth (see below).
 pipx install .          # or: make install   (into a local .venv)
 ```
 
-### Run it (inside a cmux surface)
+### As an aw-qt-managed watcher (recommended)
 
-Open a dedicated cmux tab and run:
+`pipx install .` then let aw-qt auto-discover it (it starts executables named
+`aw-watcher-*`). Ensure aw-qt has Accessibility permission.
 
-```bash
-aw-watcher-cmux --verbose
-```
+### Standalone / launchd
 
-To auto-start it, use a cmux startup command for a workspace, e.g.:
+`pipx install .` then run `aw-watcher-cmux`, or install the LaunchAgent at
+[`packaging/`](packaging/) (edit paths, `launchctl bootstrap gui/$(id -u) <plist>`).
+Grant the executable Accessibility permission.
 
-```bash
-cmux new-workspace --command "aw-watcher-cmux"
-```
+### Verify your setup
 
-so the watcher launches inside a real surface every time. (A `launchd` plist is
-included at [`packaging/`](packaging/) for reference, but see the warning above
-— it will not work until external socket auth is configured.)
+From inside a cmux tab, confirm the AX reading matches cmux's own answer:
 
-### External socket auth (experimental)
-
-cmux's CLI supports `--password` / `CMUX_SOCKET_PASSWORD` / a keychain password
-and an `auth.login` method. If you set a socket password in cmux Settings and
-switch the access mode away from `cmuxOnly`, a detached watcher *may* be able to
-authenticate. This is unverified and depends on your cmux version — test with
-`scripts/verify.sh` after configuring.
+    aw-watcher-cmux --selfcheck      # prints AX vs SOCKET and MATCH/MISMATCH
 
 ## Configuration
 
@@ -112,8 +103,8 @@ override the file.
 | `agent_patterns` | see example | Regexes marking a surface as an agent session |
 | `generic_terminal_label` | `terminal` | Label for non-agent surfaces |
 | `keep_command_name` | `false` | Store first command token instead of the generic label |
-| `cmux_bin` | `cmux` | Path to the cmux CLI |
-| `socket_path` | `$CMUX_SOCKET_PATH` or `/tmp/cmux.sock` | Override socket |
+| `cmux_bin` | `cmux` | Path to the cmux CLI (used by `--selfcheck` oracle) |
+| `socket_path` | `$CMUX_SOCKET_PATH` or `/tmp/cmux.sock` | cmux socket for the `--selfcheck` oracle (the watcher itself uses AX, not the socket) |
 
 CLI flags override the file: `--testing` (aw test server on port 5666 +
 `-testing` bucket suffix), `--verbose`, `--cmux-bin`, `--socket-path`,
@@ -148,21 +139,21 @@ make test          # or: pytest -q
 ```
 
 End-to-end, against an **isolated** aw test server on port 5666 (never touches
-your real data on 5600). **Run this from inside a cmux tab:**
+your real data on 5600):
 
 ```bash
 make verify        # or: scripts/verify.sh
 ```
 
 It starts `aw-server --testing`, runs the watcher for a few seconds, and asserts
-events landed in `aw-watcher-cmux_<host>-testing`. If cmux rejects the queries
-(the `cmuxOnly` problem above), the script says so explicitly.
+events landed in `aw-watcher-cmux_<host>-testing`. If the Accessibility permission
+is missing, the script says so explicitly.
 
 ## Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
-| Timeline has a permanent gap; `--verbose` logs `cmux list-workspaces exited -13` and a warning mentioning `cmuxOnly` | The watcher is detached / outside a cmux surface. cmux is rejecting it. Run it from inside a cmux tab (see the warning at the top). |
+| Timeline has a permanent gap; `--verbose` logs a warning about Accessibility permission | The watcher lacks Accessibility permission. Grant it in System Settings → Privacy & Security → Accessibility, then restart. |
 | No bucket created | aw-server isn't reachable. Heartbeats are queued and flushed on reconnect; start aw-server. |
 | Plain-shell tabs all show as `terminal` | Expected — non-agent titles collapse to one label (set `keep_command_name = true` to keep the command). |
 

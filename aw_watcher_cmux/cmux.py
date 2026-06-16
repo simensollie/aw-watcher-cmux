@@ -110,15 +110,20 @@ def parse_line(line: str) -> tuple[str, str]:
     return ref, name
 
 
-def get_focused(cmux_bin: str) -> Focused:
-    """Two CLI calls → the globally focused workspace/surface (spec §6)."""
-    ws_out = run(cmux_bin, "list-workspaces")
+def get_focused(cmux_bin: str, socket: str | None = None) -> Focused:
+    """Two CLI calls → the globally focused workspace/surface (spec §6).
+
+    `socket`, if given, is passed as `cmux --socket <path>` so the oracle can
+    target a non-default socket (otherwise cmux uses $CMUX_SOCKET_PATH/default).
+    """
+    sock_args = ("--socket", socket) if socket else ()
+    ws_out = run(cmux_bin, *sock_args, "list-workspaces")
     ws_line = focused_line(ws_out)
     if ws_line is None:
         raise CmuxError("no selected workspace")
     ws_ref, ws_name = parse_line(ws_line)
 
-    surf_out = run(cmux_bin, "list-pane-surfaces", "--workspace", ws_ref)
+    surf_out = run(cmux_bin, *sock_args, "list-pane-surfaces", "--workspace", ws_ref)
     surf_line = focused_line(surf_out)
     if surf_line is None:
         raise CmuxError("no selected surface")

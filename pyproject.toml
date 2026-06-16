@@ -20,6 +20,11 @@ classifiers = [
 dependencies = [
     # >=0.5 for client_hostname and queued heartbeat/create_bucket support.
     "aw-client>=0.5.13",
+    # macOS Accessibility API access (read cmux's focused workspace/surface).
+    # macOS-only: pyobjc ships no Linux/Windows wheels, so guard the marker to
+    # keep `pip install` (and the pure-layer tests) working in other envs / CI.
+    "pyobjc-framework-Cocoa>=10 ; sys_platform == 'darwin'",
+    "pyobjc-framework-ApplicationServices>=10 ; sys_platform == 'darwin'",
 ]
 
 [project.optional-dependencies]

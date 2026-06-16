@@ -4,10 +4,9 @@
 # (aw-server --testing on port 5666). Never touches your real ActivityWatch
 # data on port 5600.
 #
-# IMPORTANT: cmux's control socket only authorizes callers running INSIDE a
-# cmux surface (access_mode 'cmuxOnly'). Run this script from a cmux terminal
-# tab. If you run it detached, cmux rejects every query (SIGPIPE) and this
-# script will tell you so.
+# aw-watcher-cmux reads cmux focus via the macOS Accessibility API, so this
+# works whether or not it runs inside a cmux surface — but the process needs
+# Accessibility permission (System Settings > Privacy & Security > Accessibility).
 #
 # Usage:  scripts/verify.sh            # auto-detects python / aw-server
 #         PY=.venv/bin/python scripts/verify.sh
@@ -71,12 +70,10 @@ wait "$WATCHER_PID" 2>/dev/null || true   # reap quietly (no job-control message
 WATCHER_PID=""
 
 # --- inspect results --------------------------------------------------------
-if grep -q "exited -13\|cmuxOnly" /tmp/aw-verify-watcher.log; then
+if grep -q "Accessibility permission" /tmp/aw-verify-watcher.log; then
   echo
-  echo "FAIL: cmux rejected every query (SIGPIPE / access denied)."
-  echo "      You are almost certainly running this detached or outside a cmux"
-  echo "      surface. Re-run from inside a cmux terminal tab."
-  echo "      watcher log: /tmp/aw-verify-watcher.log"
+  echo "FAIL: missing Accessibility permission. Grant it in System Settings >"
+  echo "      Privacy & Security > Accessibility, then re-run."
   exit 2
 fi
 

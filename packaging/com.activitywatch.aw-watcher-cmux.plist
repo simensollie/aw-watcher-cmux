@@ -2,12 +2,10 @@
 <!--
   launchd service for aw-watcher-cmux (spec §12).
 
-  ⚠️  KNOWN LIMITATION: cmux's control socket uses access_mode 'cmuxOnly' and
-  only authorizes callers running INSIDE a cmux surface. A launchd LaunchAgent
-  is detached and has no caller surface, so cmux rejects every query (SIGPIPE)
-  and the watcher records nothing. Verified empirically. This plist is kept for
-  reference / future use once external socket auth is configured in cmux. For
-  now, run aw-watcher-cmux from inside a cmux tab instead (see README).
+  Runs as a normal LaunchAgent. aw-watcher-cmux reads cmux focus via the macOS
+  Accessibility API, so it must run in the GUI (Aqua) session and the executable
+  (or aw-qt, if it manages this watcher) needs Accessibility permission in
+  System Settings > Privacy & Security > Accessibility.
 
   Install:
     1. Edit the path in <string> below to point at your installed entry point

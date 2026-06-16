@@ -1,0 +1,26 @@
+{
+  "workspace": "Personal",
+  "window": {
+    "role": "AXWindow", "title": "Personal", "value": null, "desc": null, "selected": null,
+    "children": [
+      {
+        "role": "AXStaticText", "title": null, "value": "Personal", "desc": null, "selected": null,
+        "children": [
+          {"role": "AXButton", "title": null, "value": null, "desc": "Certain QMS, workspace 1 of 9", "selected": null, "children": []},
+          {"role": "AXButton", "title": null, "value": null, "desc": "Personal, workspace 9 of 9", "selected": null,
+            "children": [
+              {"role": "AXButton", "title": null, "value": "", "desc": "⠂ Fetch and ingest recent meetings from Plaud", "selected": true, "children": []}
+            ]
+          }
+        ]
+      },
+      {
+        "role": "AXSplitter", "title": null, "value": null, "desc": null, "selected": false,
+        "children": [
+          {"role": "AXButton", "title": null, "value": "", "desc": "⠐ Specify aw-watcher-cmux for ActivityWatch", "selected": true, "children": []},
+          {"role": "AXButton", "title": null, "value": null, "desc": "terminal", "selected": null, "children": []}
+        ]
+      }
+    ]
+  }
+}
