@@ -5,8 +5,12 @@ The fixtures are the contract: a cmux UI change that breaks extraction fails
 here.
 """
 import json
+import os
 from pathlib import Path
 
+import pytest
+
+from aw_watcher_cmux import ax
 from aw_watcher_cmux.ax import Focused, extract_focused
 
 FIX = Path(__file__).parent / "fixtures"
@@ -52,3 +56,14 @@ def test_workspace_index_none_when_row_absent():
     }
     assert extract_focused(snap) == Focused(
         workspace_name="Work", workspace_index=None, surface_title="⠐ some task")
+
+
+@pytest.mark.skipif(
+    os.environ.get("AX_LIVE") != "1",
+    reason="live AX smoke test; set AX_LIVE=1 and run inside cmux on macOS",
+)
+def test_live_get_focused_smoke():
+    assert ax.is_trusted(), "grant Accessibility permission to run this"
+    assert ax.cmux_pid() is not None, "cmux must be running"
+    f = ax.get_focused()
+    assert f is not None and f.workspace_name and f.surface_title

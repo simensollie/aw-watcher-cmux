@@ -61,3 +61,88 @@ def extract_focused(snapshot: dict) -> Focused | None:
         return None
     return Focused(workspace_name=workspace, workspace_index=state["index"],
                    surface_title=state["title"])
+
+
+# --- live layer (pyobjc) ----------------------------------------------------
+# Imported lazily so the pure extractor (and its tests) work without pyobjc.
+
+CMUX_BUNDLE_ID = "com.cmuxterm.app"
+
+_MAX_DEPTH = 12
+
+
+def is_trusted() -> bool:
+    """True if this process may use the Accessibility API."""
+    from ApplicationServices import AXIsProcessTrusted
+    return bool(AXIsProcessTrusted())
+
+
+def cmux_pid() -> int | None:
+    """PID of the running cmux app, or None if cmux isn't running."""
+    from AppKit import NSWorkspace
+    try:
+        for app in NSWorkspace.sharedWorkspace().runningApplications():
+            if app.bundleIdentifier() == CMUX_BUNDLE_ID:
+                return int(app.processIdentifier())
+    except Exception:  # noqa: BLE001 - never let AppKit errors crash the loop
+        return None
+    return None
+
+
+def _copy(el, attr):
+    """Read one AX attribute. `None` is the pyobjc placeholder for the output
+    parameter; the call returns (error, value). Any bridge error → None so a
+    revoked permission or stale element degrades to a skipped tick, not a crash.
+    """
+    from ApplicationServices import AXUIElementCopyAttributeValue
+    try:
+        err, val = AXUIElementCopyAttributeValue(el, attr, None)
+    except Exception:  # noqa: BLE001
+        return None
+    return val if err == 0 else None
+
+
+def serialize_node(el, depth: int = 0) -> dict:
+    """Recursively serialize an AXUIElement into the plain-dict shape that
+    extract_focused() consumes. role/title/value aren't read by extraction but
+    are kept so `--snapshot` produces a complete, human-readable tree for
+    capturing fixtures and diagnosing UI changes."""
+    sel = _copy(el, "AXSelected")
+    node = {
+        "role": _copy(el, "AXRole"),
+        "title": _copy(el, "AXTitle"),
+        "value": _copy(el, "AXValue"),
+        "desc": _copy(el, "AXDescription"),
+        "selected": bool(sel) if sel is not None else None,
+        "children": [],
+    }
+    if depth < _MAX_DEPTH:
+        for child in (_copy(el, "AXChildren") or []):
+            node["children"].append(serialize_node(child, depth + 1))
+    return node
+
+
+def snapshot_app(pid: int) -> dict | None:
+    """Serialize the focused window of the cmux app at `pid`."""
+    from ApplicationServices import AXUIElementCreateApplication
+    app = AXUIElementCreateApplication(pid)
+    win = _copy(app, "AXFocusedWindow")
+    if win is None:
+        return None
+    return {"workspace": _copy(win, "AXTitle"), "window": serialize_node(win)}
+
+
+def get_focused() -> Focused | None:
+    """Live focused workspace + selected surface, or None if cmux is running but
+    the expected AX structure wasn't found. Returns None too if no focused
+    window; callers distinguish 'cmux not running' via cmux_pid()."""
+    pid = cmux_pid()
+    if pid is None:
+        return None
+    try:
+        snap = snapshot_app(pid)
+    except Exception:  # noqa: BLE001 - AX bridge errors become a skipped tick
+        return None
+    if snap is None:
+        return None
+    return extract_focused(snap)
