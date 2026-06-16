@@ -16,7 +16,7 @@ from . import __version__
 from . import ax
 from . import cmux
 from . import main as loop
-from .normalize import DEFAULT_AGENT_PATTERNS, DEFAULT_GENERIC_LABEL
+from .normalize import DEFAULT_AGENT_PATTERNS, DEFAULT_GENERIC_LABEL, Normalizer
 
 logger = logging.getLogger(__name__)
 
@@ -111,14 +111,25 @@ def run_snapshot() -> int:
     if pid is None:
         print("cmux is not running")
         return 1
-    print(json.dumps(ax.snapshot_app(pid), ensure_ascii=False, indent=2))
+    snap = ax.snapshot_app(pid)
+    if snap is None:
+        print("cmux is running but has no focused window")
+        return 1
+    print(json.dumps(snap, ensure_ascii=False, indent=2))
     return 0
 
 
 def run_selfcheck(config: Config) -> int:
     """Compare the AX reading against the cmux socket oracle and report
     MATCH/MISMATCH on workspace + surface (exit 0 match, 2 mismatch, 1 if the
-    oracle is unavailable, e.g. run outside a cmux surface)."""
+    oracle is unavailable, e.g. run outside a cmux surface).
+
+    Titles are compared *normalized* (what actually gets stored), not raw: an
+    agent's leading spinner glyph animates, so two sequential reads can sample
+    different frames — the normalized label is stable and is the value we emit.
+    """
+    norm = Normalizer(config.agent_patterns, config.generic_terminal_label,
+                      config.keep_command_name)
     ax_f = ax.get_focused()
     try:
         sock = cmux.get_focused(config.cmux_bin, config.socket_path)
@@ -129,7 +140,7 @@ def run_selfcheck(config: Config) -> int:
     print(f"SOCKET : workspace={sock.workspace_name!r} surface={sock.surface_title!r}")
     ok = (ax_f is not None
           and ax_f.workspace_name == sock.workspace_name
-          and ax_f.surface_title == sock.surface_title)
+          and norm.normalize(ax_f.surface_title)[0] == norm.normalize(sock.surface_title)[0])
     print("MATCH" if ok else "MISMATCH")
     return 0 if ok else 2
 

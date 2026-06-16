@@ -75,9 +75,14 @@ _MAX_DEPTH = 12
 
 
 def is_trusted() -> bool:
-    """True if this process may use the Accessibility API."""
-    from ApplicationServices import AXIsProcessTrusted
-    return bool(AXIsProcessTrusted())
+    """True if this process may use the Accessibility API. Any bridge/import
+    error degrades to False (like the other live helpers) so the loop reports
+    NOT_TRUSTED rather than crashing."""
+    try:
+        from ApplicationServices import AXIsProcessTrusted
+        return bool(AXIsProcessTrusted())
+    except Exception:  # noqa: BLE001 - never let AX bridge errors crash the loop
+        return False
 
 
 def cmux_pid() -> int | None:
@@ -136,9 +141,9 @@ def snapshot_app(pid: int) -> dict | None:
 
 
 def get_focused() -> Focused | None:
-    """Live focused workspace + selected surface, or None if cmux is running but
-    the expected AX structure wasn't found. Returns None too if no focused
-    window; callers distinguish 'cmux not running' via cmux_pid()."""
+    """Live focused workspace + selected surface, or None when it can't be read
+    — cmux not running, no focused window, or the expected AX structure absent.
+    poll_once() calls cmux_pid() first to distinguish the 'not running' case."""
     pid = cmux_pid()
     if pid is None:
         return None
