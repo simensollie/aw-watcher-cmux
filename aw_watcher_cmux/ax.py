@@ -45,6 +45,9 @@ def extract_focused(snapshot: dict) -> Focused | None:
         # sidebar workspace list, and not itself a workspace row). `not now_sidebar`
         # already excludes a matched row (matching sets now_sidebar=True); the
         # explicit `m is None` documents "not the workspace row itself".
+        # First selected main-content node in tree order wins. In a split with
+        # two panes both reporting AXSelected, this may pick the non-focused
+        # pane; resolving that via AXFocusedUIElement is deferred (spec §4/§9).
         if (
             node.get("selected") is True
             and desc

@@ -117,12 +117,11 @@ def run_snapshot() -> int:
 
 def run_selfcheck(config: Config) -> int:
     """Compare the AX reading against the cmux socket oracle and report
-    MATCH/MISMATCH on workspace + surface (exit 0 match, 2 mismatch)."""
+    MATCH/MISMATCH on workspace + surface (exit 0 match, 2 mismatch, 1 if the
+    oracle is unavailable, e.g. run outside a cmux surface)."""
     ax_f = ax.get_focused()
     try:
-        # TODO: pass config.socket_path once cmux.get_focused accepts it; today
-        # the oracle uses $CMUX_SOCKET_PATH / the default socket.
-        sock = cmux.get_focused(config.cmux_bin)
+        sock = cmux.get_focused(config.cmux_bin, config.socket_path)
     except cmux.CmuxError as exc:
         print(f"socket oracle unavailable (run inside a cmux surface): {exc}")
         return 1

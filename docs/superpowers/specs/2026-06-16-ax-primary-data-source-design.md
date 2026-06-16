@@ -117,11 +117,14 @@ stay quiet until recovery.
 
 ## 7. Testing strategy (this tames UI-tree fragility)
 
-- **Fixture-based unit tests (`test_ax.py`):** `ax.snapshot()` serializes a real
-  cmux AX subtree to `tests/fixtures/ax_tree_*.json` (focused-workspace,
-  split-panes, browser-surface variants). Extraction runs against these offline,
-  no live cmux. These snapshots are the contract; a cmux UI change that breaks
-  extraction fails a test.
+- **Fixture-based unit tests (`test_ax.py`):** `ax.snapshot_app()` (exposed via
+  `--snapshot`) serializes a real cmux AX subtree to `tests/fixtures/ax_tree_*.json`.
+  Current fixtures: `ax_tree_focused.json` (focused workspace with a sidebar
+  decoy + a single-selection main-content split) and `ax_tree_no_selection.json`
+  (no main-content selection → None). Extraction runs against these offline, no
+  live cmux. These snapshots are the contract; a cmux UI change that breaks
+  extraction fails a test. (Future fixtures: multi-selection split panes,
+  browser surfaces.)
 - **Live oracle (`--selfcheck`):** when run inside a cmux surface, asserts
   `ax.get_focused()` agrees with `cmux.get_focused()` (socket). Makes the manual
   cross-check we ran a permanent, repeatable regression guard.

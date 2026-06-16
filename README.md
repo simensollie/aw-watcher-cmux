@@ -104,6 +104,7 @@ override the file.
 | `generic_terminal_label` | `terminal` | Label for non-agent surfaces |
 | `keep_command_name` | `false` | Store first command token instead of the generic label |
 | `cmux_bin` | `cmux` | Path to the cmux CLI (used by `--selfcheck` oracle) |
+| `socket_path` | `$CMUX_SOCKET_PATH` or `/tmp/cmux.sock` | cmux socket for the `--selfcheck` oracle (the watcher itself uses AX, not the socket) |
 
 CLI flags override the file: `--testing` (aw test server on port 5666 +
 `-testing` bucket suffix), `--verbose`, `--cmux-bin`, `--socket-path`,
