@@ -4,10 +4,11 @@ An [ActivityWatch](https://activitywatch.net/) watcher that records which
 [cmux](https://cmux.app/) **workspace** (project) and **tab/surface** (terminal
 or agent session) is focused over time.
 
-It polls the cmux Unix-socket CLI, normalizes noisy terminal titles into
-agent-aware labels, and pushes heartbeats to the local `aw-server`. Actual
-"active time" is derived at query time by intersecting with the window watcher
-(cmux frontmost) and the AFK watcher (user present).
+It reads the focused cmux workspace and tab from the macOS Accessibility API,
+normalizes noisy terminal titles into agent-aware labels, and pushes heartbeats
+to the local `aw-server`. Actual "active time" is derived at query time by
+intersecting with the window watcher (cmux frontmost) and the AFK watcher (user
+present).
 
 macOS only (cmux is macOS only).
 
@@ -24,9 +25,9 @@ macOS only (cmux is macOS only).
 ```
    poll (2s)     ┌─────────────────────────────┐
    ┌──────────►  │   aw-watcher-cmux (python)   │
-   │             │  cmux.py: run + parse CLI    │
-cmux Unix socket │  normalize.py: title rules   │ heartbeat
- (/tmp/cmux.sock)│  main.py: poll loop          │──────────►  aw-server
+   │             │  ax.py: read cmux UI via AX  │
+ macOS Accessibility  normalize.py: title rules │ heartbeat
+   │  (pyobjc)   │  main.py: poll loop          │──────────►  aw-server
    ◄─────────────┘                              │             :5600
                  └─────────────────────────────┘   bucket: aw-watcher-cmux_<host>
 ```
@@ -44,8 +45,7 @@ for AFK.
 | `app` | string | `Certain QMS` | Focused workspace name (the project dimension) |
 | `title` | string | `✳ refine reports` / `terminal` | Normalized tab label |
 | `is_agent` | bool | `true` | Whether the surface is an agent session |
-| `workspace_ref` | string | `workspace:1` | cmux ref (diagnostic) |
-| `surface_ref` | string | `surface:32` | cmux ref (diagnostic) |
+| `workspace_index` | int | `1` | 1-based position of the workspace (diagnostic) |
 
 Using `app`/`title` (not custom keys) is deliberate: aw heartbeat-merges
 consecutive identical events and its categorization rules match these keys.
@@ -103,8 +103,7 @@ override the file.
 | `agent_patterns` | see example | Regexes marking a surface as an agent session |
 | `generic_terminal_label` | `terminal` | Label for non-agent surfaces |
 | `keep_command_name` | `false` | Store first command token instead of the generic label |
-| `cmux_bin` | `cmux` | Path to the cmux CLI |
-| `socket_path` | `$CMUX_SOCKET_PATH` or `/tmp/cmux.sock` | Override socket |
+| `cmux_bin` | `cmux` | Path to the cmux CLI (used by `--selfcheck` oracle) |
 
 CLI flags override the file: `--testing` (aw test server on port 5666 +
 `-testing` bucket suffix), `--verbose`, `--cmux-bin`, `--socket-path`,

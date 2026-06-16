@@ -1,6 +1,6 @@
 # aw-watcher-cmux — AX-primary data source (design)
 
-Status: Approved (brainstorm) · Date: 2026-06-16 · Supersedes the socket-poller
+Status: Implemented · Date: 2026-06-16 · Supersedes the socket-poller
 data source in the v0.1.0 spec (§3, §6, §12, §13).
 
 ## 1. Why this change
