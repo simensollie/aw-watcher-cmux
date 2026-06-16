@@ -1,0 +1,24 @@
+{
+  "workspace": "Personal",
+  "window": {
+    "role": "AXWindow", "title": "Personal", "value": null, "desc": null, "selected": null,
+    "children": [
+      {
+        "role": "AXStaticText", "title": null, "value": "Personal", "desc": null, "selected": null,
+        "children": [
+          {"role": "AXButton", "title": null, "value": null, "desc": "Personal, workspace 9 of 9", "selected": null,
+            "children": [
+              {"role": "AXButton", "title": null, "value": "", "desc": "⠂ sidebar decoy", "selected": true, "children": []}
+            ]
+          }
+        ]
+      },
+      {
+        "role": "AXSplitter", "title": null, "value": null, "desc": null, "selected": false,
+        "children": [
+          {"role": "AXButton", "title": null, "value": "", "desc": "terminal", "selected": false, "children": []}
+        ]
+      }
+    ]
+  }
+}
