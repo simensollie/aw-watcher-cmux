@@ -20,7 +20,7 @@ class FakeConfig:
 
 
 def _focused(title="✳ refine reports"):
-    return ax.Focused(workspace_name="Certain QMS", workspace_index=1, surface_title=title)
+    return ax.Focused(workspace_name="Acme Web", workspace_index=1, surface_title=title)
 
 
 # --- poll_once status matrix -----------------------------------------------
@@ -52,7 +52,7 @@ def test_poll_once_ok(monkeypatch):
     monkeypatch.setattr(ax, "get_focused", lambda: _focused())
     ev, status = poll_once(FakeConfig(), Normalizer())
     assert status == OK
-    assert ev.data == {"app": "Certain QMS", "title": "refine reports",
+    assert ev.data == {"app": "Acme Web", "title": "refine reports",
                        "is_agent": True, "workspace_index": 1}
 
 

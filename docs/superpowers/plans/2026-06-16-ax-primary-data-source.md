@@ -53,7 +53,7 @@ Create `tests/fixtures/ax_tree_focused.json`. Each node is `{role,title,value,de
       {
         "role": "AXStaticText", "title": null, "value": "Personal", "desc": null, "selected": null,
         "children": [
-          {"role": "AXButton", "title": null, "value": null, "desc": "Certain QMS, workspace 1 of 9", "selected": null, "children": []},
+          {"role": "AXButton", "title": null, "value": null, "desc": "Acme Web, workspace 1 of 9", "selected": null, "children": []},
           {"role": "AXButton", "title": null, "value": null, "desc": "Personal, workspace 9 of 9", "selected": null,
             "children": [
               {"role": "AXButton", "title": null, "value": "", "desc": "⠂ Fetch and ingest recent meetings from Plaud", "selected": true, "children": []}
@@ -411,7 +411,7 @@ class FakeConfig:
 
 
 def _focused(title="✳ refine reports"):
-    return ax.Focused(workspace_name="Certain QMS", workspace_index=1, surface_title=title)
+    return ax.Focused(workspace_name="Acme Web", workspace_index=1, surface_title=title)
 
 
 # --- poll_once status matrix -----------------------------------------------
@@ -443,7 +443,7 @@ def test_poll_once_ok(monkeypatch):
     monkeypatch.setattr(ax, "get_focused", lambda: _focused())
     ev, status = poll_once(FakeConfig(), Normalizer())
     assert status == OK
-    assert ev.data == {"app": "Certain QMS", "title": "refine reports",
+    assert ev.data == {"app": "Acme Web", "title": "refine reports",
                        "is_agent": True, "workspace_index": 1}
 
 

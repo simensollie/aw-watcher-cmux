@@ -18,7 +18,7 @@ def test_focused_line_picks_selected_workspace():
     assert line is not None
     ref, name = cmux.parse_line(line)
     assert ref == "workspace:1"
-    assert name == "Certain QMS"
+    assert name == "Acme Web"
 
 
 def test_focused_line_picks_selected_surface():

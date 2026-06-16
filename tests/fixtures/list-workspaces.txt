@@ -1,4 +1,4 @@
-* workspace:1  Certain QMS  [selected]
-  workspace:2  Certain QMS Uptake
-  workspace:3  Pensieve
-  workspace:4  Timesheet
+* workspace:1  Acme Web  [selected]
+  workspace:2  Acme Web Staging
+  workspace:3  Billing API
+  workspace:4  Infra

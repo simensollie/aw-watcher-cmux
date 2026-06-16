@@ -14,7 +14,7 @@ macOS only (cmux is macOS only).
 
 ## What you get
 
-- **Per-workspace dwell time** — Certain QMS vs Pensieve vs Timesheet, etc.
+- **Per-workspace dwell time** — e.g. Acme Web vs Billing API vs Infra.
 - **Per-tab granularity** that distinguishes meaningful agent sessions
   (`✳ refine reports`) from plain-shell churn.
 - **Zero configuration** to start; a standard `currentwindow` bucket so the
@@ -42,7 +42,7 @@ for AFK.
 
 | Field | Type | Example | Notes |
 |---|---|---|---|
-| `app` | string | `Certain QMS` | Focused workspace name (the project dimension) |
+| `app` | string | `Acme Web` | Focused workspace name (the project dimension) |
 | `title` | string | `✳ refine reports` / `terminal` | Normalized tab label |
 | `is_agent` | bool | `true` | Whether the surface is an agent session |
 | `workspace_index` | int | `1` | 1-based position of the workspace (diagnostic) |
