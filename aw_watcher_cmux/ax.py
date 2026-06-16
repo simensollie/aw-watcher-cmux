@@ -85,6 +85,20 @@ def is_trusted() -> bool:
         return False
 
 
+def request_trust() -> bool:
+    """Trigger the native macOS Accessibility prompt and register THIS binary in
+    the Accessibility list (initially disabled — the user toggles it on). Run
+    from the same interpreter launchd will use, so the right identity is added.
+    Returns the current trust state."""
+    try:
+        from ApplicationServices import (
+            AXIsProcessTrustedWithOptions, kAXTrustedCheckOptionPrompt,
+        )
+        return bool(AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True}))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def cmux_pid() -> int | None:
     """PID of the running cmux app, or None if cmux isn't running."""
     from AppKit import NSWorkspace

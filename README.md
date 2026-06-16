@@ -69,25 +69,40 @@ telling you to grant it.
 ## Install
 
 ```bash
-pipx install .          # or: make install   (into a local .venv)
+git clone https://github.com/simensollie/aw-watcher-cmux
+cd aw-watcher-cmux
+./scripts/install.sh
 ```
 
-### As an aw-qt-managed watcher (recommended)
+This creates a self-contained venv at `~/.local/share/aw-watcher-cmux`, installs
+a launchd LaunchAgent that auto-starts the watcher at login (and survives
+ActivityWatch updates — nothing is written into the AW app), and triggers the
+macOS Accessibility prompt. Then do the one manual step it prints:
 
-`pipx install .` then let aw-qt auto-discover it (it starts executables named
-`aw-watcher-*`). Ensure aw-qt has Accessibility permission.
+1. **System Settings → Privacy & Security → Accessibility** → enable the toggle
+   for `aw-watcher-cmux` (the installer already added it).
+2. Restart it: `launchctl kickstart -k gui/$(id -u)/com.activitywatch.aw-watcher-cmux`
 
-### Standalone / launchd
+Uninstall any time with `./scripts/uninstall.sh`.
 
-`pipx install .` then run `aw-watcher-cmux`, or install the LaunchAgent at
-[`packaging/`](packaging/) (edit paths, `launchctl bootstrap gui/$(id -u) <plist>`).
-Grant the executable Accessibility permission.
+> **Why launchd and not the ActivityWatch tray?** The bundled `aw-qt` only
+> discovers watchers inside its own app bundle and on the bare GUI `PATH`, so
+> registering there means hand-editing `/Applications/ActivityWatch.app` — which
+> breaks on every AW update. launchd is more robust for a custom watcher.
 
 ### Verify your setup
 
 From inside a cmux tab, confirm the AX reading matches cmux's own answer:
 
-    aw-watcher-cmux --selfcheck      # prints AX vs SOCKET and MATCH/MISMATCH
+    ~/.local/share/aw-watcher-cmux/venv/bin/aw-watcher-cmux --selfcheck   # prints MATCH
+
+### Manual / development
+
+```bash
+make install        # editable venv install for hacking
+make test
+~/.local/share/aw-watcher-cmux/venv/bin/aw-watcher-cmux --verbose   # or run it by hand in a cmux tab
+```
 
 ## Configuration
 
